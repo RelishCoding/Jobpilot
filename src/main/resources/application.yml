@@ -1,0 +1,50 @@
+server:
+  port: 8088
+
+# mybatis相关统一配置
+mybatis-plus:
+  configuration:
+    # 开启下划线转驼峰
+    map-underscore-to-camel-case: true
+
+spring:
+  profiles:
+    active: dev
+  datasource:
+    druid:
+      driver-class-name: ${jobpilot.datasource.driver-class-name}
+      url: jdbc:mysql://${jobpilot.datasource.host}:${jobpilot.datasource.port}/${jobpilot.datasource.database}?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
+      username: ${jobpilot.datasource.username}
+      password: ${jobpilot.datasource.password}
+  redis:
+    host: ${jobpilot.redis.host}
+    port: ${jobpilot.redis.port}
+    password: ${jobpilot.redis.password}
+    database: ${jobpilot.redis.database}
+  # 邮件配置
+  mail:
+    # 邮件服务器地址
+    host: smtp.qq.com
+    # from: 1405156632@qq.com
+    # 你的邮箱地址
+    username: 1405156632@qq.com
+    # 授权码
+    password: xxxxxxxxxxxxxxxx
+    # 编码格式
+    default-encoding: UTF-8
+    # 协议
+    protocol: smtp
+    port: 465
+    properties:
+      mail:
+        smtp:
+          socketFactory:
+            port: 465
+            class: javax.net.ssl.SSLSocketFactory
+            fallback: false
+          ssl:
+            enable: true
+          auth: true
+          starttls:
+            enable: true
+            required: true
