@@ -1,10 +1,12 @@
 package com.job.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.util.RandomUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.job.constant.MessageConstants;
 import com.job.constant.RedisConstants;
+import com.job.dto.UserLoginDTO;
 import com.job.dto.UserRegisterDTO;
 import com.job.dto.VerifyCaptchaDTO;
 import com.job.entity.User;
@@ -19,6 +21,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -122,5 +126,52 @@ public class UserServiceImpl implements UserService {
         user.setState(1);
         userMapper.insert(user);
         return Result.success();
+    }
+
+    @Override
+    public Result login(UserLoginDTO userLoginDTO) {
+        String account = userLoginDTO.getAccount();
+        String password = userLoginDTO.getPassword();
+        log.info("userLoginDTO.password = {}", password);
+        QueryWrapper<User> userQueryWrapper = new QueryWrapper<>();
+
+        // 校验密码格式
+        if (RegexUtil.isPasswordInvalid(password)) {
+            return Result.fail(MessageConstants.PASSWORD_FORMAT_ERROR);
+        }
+
+        // 判断account是手机号、邮箱还是用户名
+        if (!RegexUtil.isPhoneInvalid(account)) {
+            userQueryWrapper.eq("phone", account);
+        } else if (!RegexUtil.isEmailInvalid(account)) {
+            userQueryWrapper.eq("email", account);
+        } else if (!RegexUtil.isUsernameInvalid(account)) {
+            userQueryWrapper.eq("username", account);
+        } else {
+            return Result.fail(MessageConstants.ACCOUNT_FORMAT_ERROR);
+        }
+
+        // 查询用户是否存在
+        List<User> userList = userMapper.selectList(userQueryWrapper);
+        if (CollectionUtil.isEmpty(userList)) {
+            return Result.fail(MessageConstants.USER_NOT_EXIST);
+        }
+
+        // 校验密码
+        for (User user : userList) {
+            log.info("user.password = {}", user.getPassword());
+            if (user.getPassword().equals(password)) {
+                Integer userId = user.getUserId();
+                // 更改用户登录状态
+                user.setState(1);
+                userMapper.updateById(user);
+                HashMap<String, Integer> map = new HashMap<>();
+                map.put("user_id", userId);
+                return Result.success(map);
+            }
+        }
+
+        // 密码错误
+        return Result.fail(MessageConstants.PASSWORD_ERROR);
     }
 }

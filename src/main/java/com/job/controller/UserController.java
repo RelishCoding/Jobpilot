@@ -1,5 +1,6 @@
 package com.job.controller;
 
+import com.job.dto.UserLoginDTO;
 import com.job.dto.UserRegisterDTO;
 import com.job.dto.VerifyCaptchaDTO;
 import com.job.service.UserService;
@@ -26,5 +27,10 @@ public class UserController {
     @PostMapping("/register/submit")
     public Result register(@RequestBody UserRegisterDTO userRegisterDTO) {
         return userService.register(userRegisterDTO);
+    }
+
+    @PostMapping("/login")
+    public Result login(@RequestBody UserLoginDTO userLoginDTO) {
+        return userService.login(userLoginDTO);
     }
 }
