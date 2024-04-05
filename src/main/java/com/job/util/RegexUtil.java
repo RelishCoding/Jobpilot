@@ -28,7 +28,25 @@ public class RegexUtil {
      * @return true:符合，false：不符合
      */
     public static boolean isCodeInvalid(String code){
-        return mismatch(code, RegexPatterns.VERIFY_CODE_REGEX);
+        return mismatch(code, RegexPatterns.CAPTCHA_REGEX);
+    }
+
+    /**
+     * 是否是无效的密码格式
+     * @param password 要校验的密码
+     * @return
+     */
+    public static boolean isPasswordInvalid(String password) {
+        return mismatch(password, RegexPatterns.PASSWORD_REGEX);
+    }
+
+    /**
+     * 是否是无效的用户名格式
+     * @param username 要校验的用户名
+     * @return
+     */
+    public static boolean isUsernameInvalid(String username) {
+        return mismatch(username, RegexPatterns.USERNAME_REGEX);
     }
 
     // 校验是否不符合正则格式
