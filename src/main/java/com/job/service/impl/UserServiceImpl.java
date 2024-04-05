@@ -1,8 +1,14 @@
 package com.job.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.RandomUtil;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.job.constant.MessageConstants;
 import com.job.constant.RedisConstants;
+import com.job.dto.UserRegisterDTO;
+import com.job.dto.VerifyCaptchaDTO;
+import com.job.entity.User;
+import com.job.mapper.UserMapper;
 import com.job.service.UserService;
 import com.job.util.EmailUtil;
 import com.job.util.RegexUtil;
@@ -24,6 +30,9 @@ public class UserServiceImpl implements UserService {
     @Resource
     private EmailUtil emailUtil;
 
+    @Resource
+    private UserMapper userMapper;
+
     @Override
     public Result sendCaptcha(String username, String email) {
         //校验邮箱是否合法
@@ -35,7 +44,7 @@ public class UserServiceImpl implements UserService {
         // 符合，生成验证码
         String code = RandomUtil.randomNumbers(6);
         // 保存验证码到Redis，并设置有效期 5分钟
-        stringRedisTemplate.opsForValue().set(RedisConstants.REGISTER_CODE_KEY + email, code, RedisConstants.REGISTER_CODE_TTL, TimeUnit.MINUTES);
+        stringRedisTemplate.opsForValue().set(RedisConstants.REGISTER_CODE_KEY + username, code, RedisConstants.REGISTER_CODE_TTL, TimeUnit.MINUTES);
 
         // 发送验证码
         String subject = "验证码";
@@ -48,5 +57,70 @@ public class UserServiceImpl implements UserService {
         } else {
             return Result.fail(HttpStatus.SERVICE_UNAVAILABLE.value(), MessageConstants.MAIL_SEND_FAIL);
         }
+    }
+
+    @Override
+    public Result verifyCaptcha(VerifyCaptchaDTO verifyCaptchaDTO) {
+        String username = verifyCaptchaDTO.getUsername();
+        String captcha = verifyCaptchaDTO.getCaptcha();
+
+        // 校验验证码格式
+        if (RegexUtil.isCodeInvalid(captcha)) {
+            return Result.fail(MessageConstants.CAPTCHA_FORMAT_ERROR);
+        }
+
+        String key = RedisConstants.REGISTER_CODE_KEY + username;
+        String code = stringRedisTemplate.opsForValue().get(key);
+
+        // 验证码已过期
+        if (code == null) {
+            return Result.fail(MessageConstants.CAPTCHA_TIMEOUT);
+        }
+
+        if (captcha.equals(code)) {
+            return Result.success();
+        } else {
+            return Result.fail(MessageConstants.CAPTCHA_VERIFY_FAIL);
+        }
+    }
+
+    @Override
+    public Result register(UserRegisterDTO userRegisterDTO) {
+        // 校验格式
+        if (RegexUtil.isEmailInvalid(userRegisterDTO.getEmail())) {
+            log.info("邮箱格式错误");
+            return Result.fail(MessageConstants.MAIL_FORMAT_ERROR);
+        }
+        if (RegexUtil.isUsernameInvalid(userRegisterDTO.getUsername())) {
+            log.info("用户名格式错误");
+            return Result.fail(MessageConstants.USERNAME_FORMAT_ERROR);
+        }
+        if (RegexUtil.isPhoneInvalid(userRegisterDTO.getPhone())) {
+            log.info("手机号格式错误");
+            return Result.fail(MessageConstants.PHONE_FORMAT_ERROR);
+        }
+        if (RegexUtil.isPasswordInvalid(userRegisterDTO.getPassword())) {
+            log.info("密码格式错误");
+            return Result.fail(MessageConstants.PASSWORD_FORMAT_ERROR);
+        }
+
+        // 构造对象
+        User user = new User();
+        BeanUtil.copyProperties(userRegisterDTO, user);
+
+        //todo 加密
+
+        // 查询用户是否已存在
+        QueryWrapper<User> userQueryWrapper = new QueryWrapper<>();
+        userQueryWrapper.eq("username", user.getUsername());
+        boolean exists = userMapper.exists(userQueryWrapper);
+        if (exists) {
+            return Result.fail(MessageConstants.USER_EXISTS);
+        }
+
+        // 插入数据
+        user.setState(1);
+        userMapper.insert(user);
+        return Result.success();
     }
 }
