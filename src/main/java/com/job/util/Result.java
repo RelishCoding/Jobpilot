@@ -26,6 +26,13 @@ public class Result implements Serializable {
         return result;
     }
 
+    public static Result fail(String msg) {
+        Result result = new Result();
+        result.code = HttpStatus.BAD_REQUEST.value();
+        result.msg = msg;
+        return result;
+    }
+
     public static Result fail(int code, String msg) {
         Result result = new Result();
         result.code = code;
